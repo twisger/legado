@@ -1,17 +1,17 @@
 package io.legado.app.ui.book.read
-
 import android.app.Application
 import android.content.DialogInterface
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import androidx.core.content.edit
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import com.google.gson.JsonParser
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.base.BaseViewModel
@@ -28,6 +28,7 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.model.ReadBook
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.applyTint
+import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.toastOnUi
@@ -46,7 +47,7 @@ import okhttp3.Response
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
-
+import splitties.init.appCtx
 import java.util.concurrent.TimeUnit
 
 /**
@@ -56,7 +57,7 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
     private companion object {
         const val DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
         const val DEEPSEEK_API_KEY = ""
-        const val PROMPT_PREFIX = "请你补充这段小说中没有详细描写的性爱细节（包括但不限于口交，乳交，正面位，后入位、骑乘位，侧卧位等体位的性交或调情，需根据剧情和上下文判断，种类尽可能多），保持文笔，风格，人物形象和原文一致，要非常详细的描写内容，动作，神态，微表情，微动作，场景交互，服饰细节，身体反应，对话，各种部位的外观(包括但不限于阴茎，睾丸，乳房，精液等性器官的大小，形状，质感，色泽等细节)，以及性高潮，射精等动作的详细描写来增加香艳程度。没有篇幅限制，不要省略任何详细描写，补充的内容要尽可能长，不少于3000字。直接输出补充的部分，不要任何带无关的解释和说明。\n"
+        const val DEFAULT_PROMPT_PREFIX = "请你补充这段小说中没有详细描写的性爱细节（包括但不限于口交，乳交，正面位，后入位、骑乘位，侧卧位等体位的性交或调情，需根据剧情和上下文判断，种类尽可能多），保持文笔，风格，人物形象和原文一致，要非常详细的描写内容，动作，神态，微表情，微动作，场景交互，服饰细节，身体反应，对话，各种部位的外观(包括但不限于阴茎，睾丸，乳房，精液等性器官的大小，形状，质感，色泽等细节)，以及性高潮，射精等动作的详细描写来增加香艳程度。没有篇幅限制，不要省略任何详细描写，补充的内容要尽可能长，不少于3000字。直接输出补充的部分，不要任何带无关的解释和说明。"
     }
     private var isStreaming = false
     private val streamBuffer = StringBuilder()
@@ -108,11 +109,40 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
         return DEEPSEEK_API_KEY// 临时测试用
     }
 
+    private object AiPrefs {
+        private val prefs = appCtx.defaultSharedPreferences
+        var aiPrompt: String
+            get() = prefs.getString("ai_prompt", DEFAULT_PROMPT_PREFIX) ?: ""
+            set(value) = prefs.edit { putString("ai_prompt", value) }
+    }
+
+    private fun showPromptEditDialog() {
+        val currentPrompt = AiPrefs.aiPrompt
+        alert {
+            setTitle("编辑提示词")
+            val editText = EditText(requireContext()).apply {
+                setText(currentPrompt)
+            }
+            setCustomView(editText)
+            okButton {
+                val newPrompt = editText.text.toString().trim()
+                if (newPrompt.isNotEmpty()) {
+                    AiPrefs.aiPrompt = newPrompt
+                    context?.toastOnUi("提示词已更新")
+                } else {
+                    context?.toastOnUi("提示词不能为空")
+                }
+            }
+            cancelButton { }
+        }.show()
+    }
+
     private fun handleAISupplement() {
         if (isStreaming) {
             context?.toastOnUi("正在生成中...")
             return
         }
+        val currentPrompt = AiPrefs.aiPrompt
         // 获取当前全文和光标位置
         val fullText = binding.contentView.text.toString()
         val cursorPos = binding.contentView.selectionStart
@@ -133,7 +163,7 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
                 })
                 add(JsonObject().apply {
                     addProperty("role", "user")
-                    addProperty("content", PROMPT_PREFIX + markedText)
+                    addProperty("content", currentPrompt + "\n" + markedText)
                 })
             }
 
@@ -252,6 +282,9 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
                     .sendToClip("${binding.toolBar.title}\n${binding.contentView.text}")
                 R.id.menu_ai_supplement -> {
                     handleAISupplement()
+                }
+                R.id.menu_ai_prompt_config -> {
+                    showPromptEditDialog()
                 }
             }
             return@setOnMenuItemClickListener true
