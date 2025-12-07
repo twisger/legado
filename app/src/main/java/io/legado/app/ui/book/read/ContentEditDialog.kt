@@ -203,7 +203,7 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
                     })
                     add(JsonObject().apply {
                         addProperty("role", "user")
-                        addProperty("content", currentPrompt + "\n" + finalContent.toString())
+                        addProperty("content", currentPrompt + "\n\n" + finalContent.toString())
                     })
                 }
 
