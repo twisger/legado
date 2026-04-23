@@ -12,6 +12,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
+import io.legado.app.BuildConfig
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.base.BaseViewModel
@@ -56,7 +57,6 @@ import java.util.concurrent.TimeUnit
 class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
     private companion object {
         const val DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
-        const val DEEPSEEK_API_KEY = ""
         const val DEFAULT_PROMPT_PREFIX = "请你补充这段小说中没有详细描写的细节"
     }
     private var isStreaming = false
@@ -105,8 +105,8 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
     }
 
     private fun getDeepSeekApiKey(): String {
-        // 从安全存储（如EncryptedSharedPreferences）获取
-        return DEEPSEEK_API_KEY// 临时测试用
+        // 从BuildConfig获取
+        return BuildConfig.DEEPSEEK_API_KEY
     }
 
     private object AiPrefs {
