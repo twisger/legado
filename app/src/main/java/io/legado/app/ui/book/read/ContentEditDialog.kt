@@ -181,6 +181,7 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
 
             val requestBody = JsonObject().apply {
                 addProperty("model", "deepseek-reasoner")
+                addProperty("temperature", 1.5)
 
                 val messages = JsonArray().apply {
                     add(JsonObject().apply {
