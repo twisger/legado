@@ -2,6 +2,7 @@ package io.legado.app.ui.book.read
 import android.app.Application
 import android.content.DialogInterface
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
@@ -59,6 +60,7 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
         const val DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
         const val DEFAULT_PROMPT_PREFIX = "请你补充这段小说中没有详细描写的细节"
         const val DEFAULT_MODEL = "deepseek-v4-flash"
+        const val DEFAULT_TEMPERATURE = 1.5f
     }
     private var isStreaming = false
     private val streamBuffer = StringBuilder()
@@ -119,6 +121,10 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
         var aiModel: String
             get() = prefs.getString("ai_model", DEFAULT_MODEL) ?: DEFAULT_MODEL
             set(value) = prefs.edit { putString("ai_model", value) }
+
+        var aiTemperature: Float
+            get() = prefs.getFloat("ai_temperature", DEFAULT_TEMPERATURE)
+            set(value) = prefs.edit { putFloat("ai_temperature", value) }
     }
 
     private fun showPromptEditDialog() {
@@ -158,6 +164,28 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
         }.show()
     }
 
+    private fun showTemperatureConfigDialog() {
+        val currentTemp = AiPrefs.aiTemperature
+        alert {
+            setTitle("配置AI温度 (0.0 - 2.0)")
+            val editText = EditText(requireContext()).apply {
+                setText(currentTemp.toString())
+                inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+            }
+            setCustomView(editText)
+            okButton {
+                val input = editText.text.toString().toFloatOrNull()
+                if (input != null && input in 0.0f..2.0f) {
+                    AiPrefs.aiTemperature = input
+                    context?.toastOnUi("温度已设置为: $input")
+                } else {
+                    context?.toastOnUi("请输入0.0到2.0之间的数字")
+                }
+            }
+            cancelButton { }
+        }.show()
+    }
+
     private fun handleAISupplement() {
         if (isStreaming) {
             context?.toastOnUi("正在生成中...")
@@ -165,6 +193,7 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
         }
         val currentPrompt = AiPrefs.aiPrompt
         val currentModel = AiPrefs.aiModel
+        val currentTemp = AiPrefs.aiTemperature
         // 获取当前章节全文和光标位置
         val fullText = binding.contentView.text.toString()
         val cursorPos = binding.contentView.selectionStart
@@ -203,7 +232,7 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
 
             val requestBody = JsonObject().apply {
                 addProperty("model", currentModel)
-                addProperty("temperature", 1.5)
+                addProperty("temperature", currentTemp)
 
                 val messages = JsonArray().apply {
                     add(JsonObject().apply {
@@ -348,6 +377,9 @@ class ContentEditDialog : BaseDialogFragment(R.layout.dialog_content_edit) {
                 }
                 R.id.menu_ai_model_config -> {
                     showModelConfigDialog()
+                }
+                R.id.menu_ai_temperature_config -> {
+                    showTemperatureConfigDialog()
                 }
                 R.id.menu_ai_prompt_config -> {
                     showPromptEditDialog()

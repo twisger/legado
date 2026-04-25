@@ -25,6 +25,9 @@
         android:id="@+id/menu_ai_model_config"
         android:title="AI模型选择" />
     <item
+        android:id="@+id/menu_ai_temperature_config"
+        android:title="AI温度配置" />
+    <item
         android:id="@+id/menu_ai_prompt_config"
         android:title="@string/prompt_config" />
 
